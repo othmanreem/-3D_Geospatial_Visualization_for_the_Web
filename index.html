@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ocean Climate Data Visualization Dashboard</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="/src/styles/main.css">
+</head>
+<body>
+  <div id="app" class="dashboard-container">
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-dark bg-dark sticky-top">
+      <div class="container-fluid">
+        <span class="navbar-brand mb-0 h1">Ocean Climate Data Explorer</span>
+        <span class="navbar-text text-muted">IPCC CMIP6 Scenarios - Northern Europe</span>
+      </div>
+    </nav>
+
+    <!-- Main Dashboard Layout -->
+    <div class="container-fluid dashboard-content">
+      <div class="row h-100">
+        <!-- Control Panel -->
+        <div class="col-lg-3 control-panel">
+          <div class="card">
+            <div class="card-header bg-primary text-white">
+              <h5 class="mb-0">Data Controls</h5>
+            </div>
+            <div class="card-body">
+              
+              <!-- Scenario Selection -->
+              <div class="mb-4">
+                <label for="scenarioSelect" class="form-label fw-bold">Climate Scenario</label>
+                <select id="scenarioSelect" class="form-select">
+                  <option value="SSP1-2.6">SSP1-2.6 (Low Emissions)</option>
+                  <option value="SSP5-8.5">SSP5-8.5 (High Emissions)</option>
+                </select>
+                <small class="text-muted d-block mt-2">SSP1-2.6: Optimistic scenario | SSP5-8.5: Pessimistic scenario</small>
+              </div>
+
+              <!-- Variable Selection -->
+              <div class="mb-4">
+                <label for="variableSelect" class="form-label fw-bold">Ocean Variable</label>
+                <select id="variableSelect" class="form-select">
+                  <option value="sst">Sea Surface Temperature (°C)</option>
+                  <option value="temp">Mean Temperature Change (°C)</option>
+                  <option value="slr">Sea Level Rise (cm)</option>
+                  <option value="ph">Ocean pH</option>
+                </select>
+              </div>
+
+              <!-- Time Period Selection -->
+              <div class="mb-4">
+                <label for="periodSelect" class="form-label fw-bold">Time Period</label>
+                <select id="periodSelect" class="form-select">
+                  <option value="near-term">Near Term (2021-2040)</option>
+                  <option value="mid-term">Mid Term (2041-2060)</option>
+                  <option value="long-term">Long Term (2080-2100)</option>
+                </select>
+              </div>
+
+              <!-- Colormap Selection -->
+              <div class="mb-4">
+                <label for="colormapSelect" class="form-label fw-bold">Color Scale</label>
+                <select id="colormapSelect" class="form-select">
+                  <option value="viridis">Viridis</option>
+                  <option value="rdylbu_r">Red-Yellow-Blue (Rev)</option>
+                  <option value="reds">Reds</option>
+                  <option value="blues">Blues</option>
+                </select>
+              </div>
+
+              <!-- Opacity Control -->
+              <div class="mb-4">
+                <label for="opacitySlider" class="form-label fw-bold">3D Surface Opacity</label>
+                <input type="range" id="opacitySlider" class="form-range" min="0" max="1" step="0.1" value="0.8">
+                <small id="opacityValue" class="text-muted">0.8</small>
+              </div>
+
+              <!-- Statistics Card -->
+              <div class="alert alert-info">
+                <h6 class="alert-heading">Selected Data</h6>
+                <div id="statsContainer" class="small">
+                  <p id="minStat">Min: --</p>
+                  <p id="maxStat">Max: --</p>
+                  <p id="meanStat">Mean: --</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Visualization Area -->
+        <div class="col-lg-9 visualization-area">
+          <!-- 3D Visualization -->
+          <div class="row h-70">
+            <div class="col-12">
+              <div class="card h-100">
+                <div class="card-header bg-success text-white">
+                  <h5 class="mb-0">3D Geospatial Visualization</h5>
+                </div>
+                <div class="card-body p-0">
+                  <canvas id="canvas3d"></canvas>
+                  <div id="tooltip" class="visualization-tooltip" style="display: none;"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 2D Visualizations -->
+          <div class="row h-30 mt-3">
+            <!-- 2D Chart 1: Spatial Distribution -->
+            <div class="col-lg-6">
+              <div class="card h-100">
+                <div class="card-header bg-warning text-dark">
+                  <h6 class="mb-0">Value Distribution</h6>
+                </div>
+                <div class="card-body p-2">
+                  <svg id="histogram" style="width: 100%; height: 100%;"></svg>
+                </div>
+              </div>
+            </div>
+
+            <!-- 2D Chart 2: Comparison -->
+            <div class="col-lg-6">
+              <div class="card h-100">
+                <div class="card-header bg-warning text-dark">
+                  <h6 class="mb-0">Scenario Comparison</h6>
+                </div>
+                <div class="card-body p-2">
+                  <svg id="comparison" style="width: 100%; height: 100%;"></svg>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
