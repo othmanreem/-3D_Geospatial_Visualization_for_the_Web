@@ -59,6 +59,7 @@ class OceanDashboard {
           this.currentData.data,
           this.currentData.width,
           this.currentData.height,
+          this.currentData.metadata.bounds, // from GeoTIFF
           this.state.colormap
         );
       }
@@ -129,10 +130,16 @@ class OceanDashboard {
     if (this.currentData) {
       this.viz3d.updateSurface(
         this.currentData.data,
-        this.currentData.width,
-        this.currentData.height,
-        this.state.colormap
+          this.currentData.width,
+          this.currentData.height,
+          this.currentData.metadata.bounds, // from GeoTIFF
+          this.state.colormap
+        // this.currentData.data,
+        // this.currentData.width,
+        // this.currentData.height,
+        // this.state.colormap
       );
+      
       this.viz3d.setOpacity(this.state.opacity);
     }
   }
@@ -159,7 +166,12 @@ class OceanDashboard {
           this.currentData.data,
           this.currentData.width,
           this.currentData.height,
+          this.currentData.metadata.bounds, // from GeoTIFF
           this.state.colormap
+          // this.currentData.data,
+          // this.currentData.width,
+          // this.currentData.height,
+          // this.state.colormap
         );
       }
 

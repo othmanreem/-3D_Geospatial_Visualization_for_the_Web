@@ -46,13 +46,21 @@ export class OceanViz3D {
     // Lighting
     this.setupLighting();
 
-    // Grid helper for reference
-    const gridHelper = new THREE.GridHelper(500, 10, 0x444444, 0x888888);
-    this.scene.add(gridHelper);
+    // Optional: faint Earth outline
+    const globe = new THREE.Mesh(
+      new THREE.SphereGeometry(100, 64, 64),
+      new THREE.MeshBasicMaterial({ color: 0xdddddd, wireframe: true, opacity: 0.1, transparent: true })
+    );
+    this.scene.add(globe);
 
-    // Axes helper
-    const axesHelper = new THREE.AxesHelper(200);
-    this.scene.add(axesHelper);
+
+    // // Grid helper for reference
+    // const gridHelper = new THREE.GridHelper(500, 10, 0x444444, 0x888888);
+    // this.scene.add(gridHelper);
+
+    // // Axes helper
+    // const axesHelper = new THREE.AxesHelper(200);
+    // this.scene.add(axesHelper);
 
     // Animation loop
     this.animate();
@@ -117,129 +125,231 @@ export class OceanViz3D {
     });
   }
 
-  updateSurface(data, width, height, colormap = 'viridis') {
-    // Remove old mesh
+  updateSurface(data, width, height, bounds, colormap = 'viridis') {
+    // Clean up old mesh
     if (this.mesh) {
       this.scene.remove(this.mesh);
       this.mesh.geometry.dispose();
       this.mesh.material.dispose();
     }
-
-    this.colorMap = colormap;
-    this.textureData = data;
-
-    // Create geometry
+  
+    const { west, south, east, north } = bounds;
+  
+    // Prepare geometry
     const geometry = new THREE.BufferGeometry();
-
-    // Create vertices from data
     const vertices = [];
     const colors = [];
     const indices = [];
-
-    // Find min/max for normalization
-
+  
+    // Data stats
     const validData = data.filter(v => Number.isFinite(v));
-
     if (validData.length === 0) {
-      console.error('No valid data values found');
+      console.error('No valid data values');
       return;
     }
-
+  
     const min = Math.min(...validData);
     const max = Math.max(...validData);
     const range = max - min || 1;
-
-    // const min = Math.min(...data);
-    // const max = Math.max(...data);
-    // const range = max - min || 1;
-
-    const scaleX = 200 / width;
-    const scaleZ = 200 / height;
-    const scaleY = 100 / range;
-
-    // Get colormap
-    const color = this.getColorMap(colormap);
-
-    // Create vertices
+  
+    const colorScale = this.getColorMap(colormap);
+  
+    const EARTH_RADIUS = 100;           // visual scale
+    const HEIGHT_SCALE = 5;             // subtle displacement
+  
+    // --- Create vertices ---
     for (let i = 0; i < height; i++) {
       for (let j = 0; j < width; j++) {
-
+  
         const value = data[i * width + j];
-        const x = j * scaleX - 100;
-        const z = i * scaleZ - 100;
-
-
-        if (!Number.isFinite(value)) {
-          // Flat vertex at sea level (or any baseline)
-          vertices.push(x, 0, z);
-
-          // Neutral gray color for missing data
+  
+        // Pixel → lat/lon
+        const lon = west + (j / (width - 1)) * (east - west);
+        const lat = north - (i / (height - 1)) * (north - south);
+  
+        // Optional: focus on Northern Europe only
+        // if (lat < 35 || lat > 75 || lon < -15 || lon > 40) continue;
+  
+        let radius = EARTH_RADIUS;
+  
+        if (Number.isFinite(value)) {
+          const normalized = (value - min) / range;
+          radius += normalized * HEIGHT_SCALE;
+  
+          const c = colorScale(normalized);
+          colors.push(c.r / 255, c.g / 255, c.b / 255);
+        } else {
           colors.push(0.5, 0.5, 0.5);
-
-          continue;
         }
-
-        const y = (value - min) * scaleY;
-        vertices.push(x, y, z);
-
-        const normalized = Math.min(
-          1,
-          Math.max(0, (value - min) / range)
-        );
-
-        const c = color(normalized);
-        colors.push(c.r / 255, c.g / 255, c.b / 255);
-
-        // const value = data[i * width + j];
-        // const x = j * scaleX - 100;
-        // const z = i * scaleZ - 100;
-        // const y = (value - min) * scaleY;
-
-        // vertices.push(x, y, z);
-
-        // // Color based on value
-        // const normalized = (value - min) / range;
-        // const c = color(normalized);
-        // colors.push(c.r / 255, c.g / 255, c.b / 255);
+  
+        const pos = this.latLonToCartesian(lat, lon, radius);
+        vertices.push(pos.x, pos.y, pos.z);
       }
     }
-
-    // Create indices for faces
+  
+    // --- Indices (same grid logic as before) ---
     for (let i = 0; i < height - 1; i++) {
       for (let j = 0; j < width - 1; j++) {
         const a = i * width + j;
         const b = i * width + (j + 1);
         const c = (i + 1) * width + (j + 1);
         const d = (i + 1) * width + j;
-
+  
         indices.push(a, b, d);
         indices.push(b, c, d);
       }
     }
-
-    geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(vertices), 3));
-    geometry.setAttribute('color', new THREE.BufferAttribute(new Float32Array(colors), 3));
-    geometry.setIndex(new THREE.BufferAttribute(new Uint32Array(indices), 1));
+  
+    geometry.setAttribute(
+      'position',
+      new THREE.Float32BufferAttribute(vertices, 3)
+    );
+    geometry.setAttribute(
+      'color',
+      new THREE.Float32BufferAttribute(colors, 3)
+    );
+    geometry.setIndex(indices);
     geometry.computeVertexNormals();
-
-    // Create material with vertex colors
+  
     const material = new THREE.MeshPhongMaterial({
       vertexColors: true,
       side: THREE.DoubleSide,
-      wireframe: false,
-      shininess: 100,
+      shininess: 80,
     });
-
-    // Create mesh
+  
     this.mesh = new THREE.Mesh(geometry, material);
-    this.mesh.castShadow = true;
-    this.mesh.receiveShadow = true;
     this.scene.add(this.mesh);
-
-    // Center camera on mesh
-    this.camera.position.set(0, 150, 150);
-    this.camera.lookAt(0, 50, 0);
+  
+    // Camera framing
+    this.camera.position.set(0, 0, 300);
+    this.camera.lookAt(0, 0, 0);
   }
+  
+
+  // updateSurface(data, width, height, bounds, colormap = 'viridis') {
+  //   // Remove old mesh
+  //   if (this.mesh) {
+  //     this.scene.remove(this.mesh);
+  //     this.mesh.geometry.dispose();
+  //     this.mesh.material.dispose();
+  //   }
+
+  //   this.colorMap = colormap;
+  //   this.textureData = data;
+
+  //   // Create geometry
+  //   const geometry = new THREE.BufferGeometry();
+
+  //   // Create vertices from data
+  //   const vertices = [];
+  //   const colors = [];
+  //   const indices = [];
+
+  //   // Find min/max for normalization
+
+  //   const validData = data.filter(v => Number.isFinite(v));
+
+  //   if (validData.length === 0) {
+  //     console.error('No valid data values found');
+  //     return;
+  //   }
+
+  //   const min = Math.min(...validData);
+  //   const max = Math.max(...validData);
+  //   const range = max - min || 1;
+
+  //   // const min = Math.min(...data);
+  //   // const max = Math.max(...data);
+  //   // const range = max - min || 1;
+
+  //   // const scaleX = 200 / width;
+  //   // const scaleZ = 200 / height;
+  //   // const scaleY = 100 / range;
+
+  //   // Get colormap
+  //   const color = this.getColorMap(colormap);
+
+  //   // Create vertices
+  //   for (let i = 0; i < height; i++) {
+  //     for (let j = 0; j < width; j++) {
+
+  //       const value = data[i * width + j];
+  //       const x = j * scaleX - 100;
+  //       const z = i * scaleZ - 100;
+
+
+  //       if (!Number.isFinite(value)) {
+  //         // Flat vertex at sea level (or any baseline)
+  //         vertices.push(x, 0, z);
+
+  //         // Neutral gray color for missing data
+  //         colors.push(0.5, 0.5, 0.5);
+
+  //         continue;
+  //       }
+
+  //       const y = (value - min) * scaleY;
+  //       vertices.push(x, y, z);
+
+
+  //       const normalized = Math.min(
+  //         1,
+  //         Math.max(0, (value - min) / range)
+  //       );
+
+  //       const c = color(normalized);
+  //       colors.push(c.r / 255, c.g / 255, c.b / 255);
+
+  //       // const value = data[i * width + j];
+  //       // const x = j * scaleX - 100;
+  //       // const z = i * scaleZ - 100;
+  //       // const y = (value - min) * scaleY;
+
+  //       // vertices.push(x, y, z);
+
+  //       // // Color based on value
+  //       // const normalized = (value - min) / range;
+  //       // const c = color(normalized);
+  //       // colors.push(c.r / 255, c.g / 255, c.b / 255);
+  //     }
+  //   }
+
+  //   // Create indices for faces
+  //   for (let i = 0; i < height - 1; i++) {
+  //     for (let j = 0; j < width - 1; j++) {
+  //       const a = i * width + j;
+  //       const b = i * width + (j + 1);
+  //       const c = (i + 1) * width + (j + 1);
+  //       const d = (i + 1) * width + j;
+
+  //       indices.push(a, b, d);
+  //       indices.push(b, c, d);
+  //     }
+  //   }
+
+  //   geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(vertices), 3));
+  //   geometry.setAttribute('color', new THREE.BufferAttribute(new Float32Array(colors), 3));
+  //   geometry.setIndex(new THREE.BufferAttribute(new Uint32Array(indices), 1));
+  //   geometry.computeVertexNormals();
+
+  //   // Create material with vertex colors
+  //   const material = new THREE.MeshPhongMaterial({
+  //     vertexColors: true,
+  //     side: THREE.DoubleSide,
+  //     wireframe: false,
+  //     shininess: 100,
+  //   });
+
+  //   // Create mesh
+  //   this.mesh = new THREE.Mesh(geometry, material);
+  //   this.mesh.castShadow = true;
+  //   this.mesh.receiveShadow = true;
+  //   this.scene.add(this.mesh);
+
+  //   // Center camera on mesh
+  //   this.camera.position.set(0, 150, 150);
+  //   this.camera.lookAt(0, 50, 0);
+  // }
 
   // getColorMap(name) {
   //   const maps = {
@@ -259,6 +369,7 @@ export class OceanViz3D {
       blues: chroma.scale('Blues'),
     };
   
+
     const scale = maps[name] || maps.viridis;
   
     // Return a function mapping [0,1] → RGB object
@@ -267,6 +378,18 @@ export class OceanViz3D {
       return { r: c[0], g: c[1], b: c[2] };
     };
   }
+
+  latLonToCartesian(lat, lon, radius) {
+    const phi = THREE.MathUtils.degToRad(90 - lat);
+    const theta = THREE.MathUtils.degToRad(lon + 180);
+  
+    return new THREE.Vector3(
+      radius * Math.sin(phi) * Math.cos(theta),
+      radius * Math.cos(phi),
+      radius * Math.sin(phi) * Math.sin(theta)
+    );
+  }
+  
 
   setOpacity(opacity) {
     if (this.mesh && this.mesh.material) {
