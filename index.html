@@ -90,50 +90,49 @@
           </div>
         </div>
 
-        <!-- Visualization Area -->
-        <div class="col-lg-9 visualization-area">
-          <!-- 3D Visualization -->
-          <div class="row h-70">
-            <div class="col-12">
-              <div class="card h-100">
-                <div class="card-header bg-success text-white">
-                  <h5 class="mb-0">3D Geospatial Visualization</h5>
-                </div>
-                <div class="card-body p-0">
-                  <canvas id="canvas3d"></canvas>
-                  <div id="tooltip" class="visualization-tooltip" style="display: none;"></div>
-                </div>
+              <!-- Visualization Area -->
+      <div class="col-lg-9 visualization-area">
+        <div class="row h-100">
+
+          <!-- 3D Visualization (Left) -->
+          <div class="col-lg-8 d-flex">
+            <div class="card flex-fill">
+              <div class="card-header bg-success text-white">
+                <h5 class="mb-0">3D Geospatial Visualization</h5>
+              </div>
+              <div class="card-body p-0">
+                <canvas id="canvas3d"></canvas>
+                <div id="tooltip" class="visualization-tooltip" style="display: none;"></div>
               </div>
             </div>
           </div>
 
-          <!-- 2D Visualizations -->
-          <div class="row h-30 mt-3">
-            <!-- 2D Chart 1: Spatial Distribution -->
-            <div class="col-lg-6">
-              <div class="card h-100">
-                <div class="card-header bg-warning text-dark">
-                  <h6 class="mb-0">Value Distribution</h6>
-                </div>
-                <div class="card-body p-2">
-                  <svg id="histogram" style="width: 100%; height: 100%;"></svg>
-                </div>
+          <!-- 2D Charts (Right) -->
+          <div class="col-lg-4 d-flex flex-column gap-3">
+
+            <!-- Histogram -->
+            <div class="card flex-fill">
+              <div class="card-header bg-warning text-dark">
+                <h6 class="mb-0">Value Distribution</h6>
+              </div>
+              <div class="card-body p-2">
+                <svg id="histogram" style="width:100%; height:100%;"></svg>
               </div>
             </div>
 
-            <!-- 2D Chart 2: Comparison -->
-            <div class="col-lg-6">
-              <div class="card h-100">
-                <div class="card-header bg-warning text-dark">
-                  <h6 class="mb-0">Scenario Comparison</h6>
-                </div>
-                <div class="card-body p-2">
-                  <svg id="comparison" style="width: 100%; height: 100%;"></svg>
-                </div>
+            <!-- Comparison -->
+            <div class="card flex-fill">
+              <div class="card-header bg-warning text-dark">
+                <h6 class="mb-0">Scenario Comparison</h6>
+              </div>
+              <div class="card-body p-2">
+                <svg id="comparison" style="width:100%; height:100%;"></svg>
               </div>
             </div>
+
           </div>
         </div>
+      </div>
       </div>
     </div>
   </div>

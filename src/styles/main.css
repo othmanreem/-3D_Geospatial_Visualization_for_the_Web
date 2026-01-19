@@ -28,11 +28,7 @@
   }
   
   .dashboard-content {
-    flex: 1;
-    display: flex;
     overflow: hidden;
-    padding: 0;
-    gap: 15px;
     padding: 15px;
     height: calc(100vh - 56px);
   }
@@ -47,13 +43,17 @@
     height: fit-content;
     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
   }
-  
   .visualization-area {
-    display: flex;
-    flex-direction: column;
+    height: 100%;
     overflow: hidden;
-    padding: 0;
   }
+
+  .visualization-area,
+.visualization-area > .row,
+.visualization-area > .row > div {
+  height: 100%;
+}
+
   
   .h-70 {
     height: 70%;
@@ -72,7 +72,7 @@
     display: flex;
     flex-direction: column;
   }
-  
+
   .card-body {
     flex: 1;
     overflow: hidden;
@@ -144,10 +144,19 @@
       width: 100%;
     }
   }
-  
+
+  .visualization-area .row {
+    height: 100%;
+  }
   /* Alert styling */
   .alert {
     margin-bottom: 0;
+  }
+
+  .dashboard-content > .row {
+    height: 100%;
+    width: 100%;
+    margin: 0;
   }
   
   .alert-info {
