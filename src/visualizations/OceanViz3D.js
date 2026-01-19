@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { PCFSoftShadowMap } from 'three';
 import chroma from 'chroma-js';
 
 export class OceanViz3D {
@@ -40,7 +41,7 @@ export class OceanViz3D {
     this.renderer.setSize(this.width, this.height);
     this.renderer.setPixelRatio(window.devicePixelRatio);
     this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = THREE.PCFShadowShadowMap;
+    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
     // Lighting
     this.setupLighting();
@@ -136,9 +137,21 @@ export class OceanViz3D {
     const indices = [];
 
     // Find min/max for normalization
-    const min = Math.min(...data);
-    const max = Math.max(...data);
+
+    const validData = data.filter(v => Number.isFinite(v));
+
+    if (validData.length === 0) {
+      console.error('No valid data values found');
+      return;
+    }
+
+    const min = Math.min(...validData);
+    const max = Math.max(...validData);
     const range = max - min || 1;
+
+    // const min = Math.min(...data);
+    // const max = Math.max(...data);
+    // const range = max - min || 1;
 
     const scaleX = 200 / width;
     const scaleZ = 200 / height;
@@ -150,17 +163,44 @@ export class OceanViz3D {
     // Create vertices
     for (let i = 0; i < height; i++) {
       for (let j = 0; j < width; j++) {
+
         const value = data[i * width + j];
         const x = j * scaleX - 100;
         const z = i * scaleZ - 100;
-        const y = (value - min) * scaleY;
 
+
+        if (!Number.isFinite(value)) {
+          // Flat vertex at sea level (or any baseline)
+          vertices.push(x, 0, z);
+
+          // Neutral gray color for missing data
+          colors.push(0.5, 0.5, 0.5);
+
+          continue;
+        }
+
+        const y = (value - min) * scaleY;
         vertices.push(x, y, z);
 
-        // Color based on value
-        const normalized = (value - min) / range;
+        const normalized = Math.min(
+          1,
+          Math.max(0, (value - min) / range)
+        );
+
         const c = color(normalized);
         colors.push(c.r / 255, c.g / 255, c.b / 255);
+
+        // const value = data[i * width + j];
+        // const x = j * scaleX - 100;
+        // const z = i * scaleZ - 100;
+        // const y = (value - min) * scaleY;
+
+        // vertices.push(x, y, z);
+
+        // // Color based on value
+        // const normalized = (value - min) / range;
+        // const c = color(normalized);
+        // colors.push(c.r / 255, c.g / 255, c.b / 255);
       }
     }
 
@@ -201,14 +241,31 @@ export class OceanViz3D {
     this.camera.lookAt(0, 50, 0);
   }
 
+  // getColorMap(name) {
+  //   const maps = {
+  //     viridis: (t) => chroma('viridis')(t),
+  //     rdylbu_r: (t) => chroma.scale('RdYlBu_r')(t),
+  //     reds: (t) => chroma.scale('Reds')(t),
+  //     blues: (t) => chroma.scale('Blues')(t),
+  //   };
+  //   return maps[name] || maps.viridis;
+  // }
+
   getColorMap(name) {
     const maps = {
-      viridis: (t) => chroma('viridis')(t),
-      rdylbu_r: (t) => chroma.scale('RdYlBu_r')(t),
-      reds: (t) => chroma.scale('Reds')(t),
-      blues: (t) => chroma.scale('Blues')(t),
+      viridis: chroma.scale('viridis'),
+      rdylbu_r: chroma.scale('RdYlBu').mode('lab'),
+      reds: chroma.scale('Reds'),
+      blues: chroma.scale('Blues'),
     };
-    return maps[name] || maps.viridis;
+  
+    const scale = maps[name] || maps.viridis;
+  
+    // Return a function mapping [0,1] → RGB object
+    return (t) => {
+      const c = scale(t).rgb();
+      return { r: c[0], g: c[1], b: c[2] };
+    };
   }
 
   setOpacity(opacity) {

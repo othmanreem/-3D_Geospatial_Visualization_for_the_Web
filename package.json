@@ -1,16 +1,14 @@
 {
   "name": "ocean-visualization-dashboard",
   "version": "1.0.0",
-  "description": "3D Geospatial Visualization Dashboard for Ocean Climate Data (IPCC CMIP6)",
   "type": "module",
-  "main": "src/main.js",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview"
   },
   "dependencies": {
-    "three": "^r128",
+    "three": "^0.158.0",
     "d3": "^7.8.5",
     "chroma-js": "^2.4.2",
     "geotiff": "^2.0.0",
@@ -18,20 +16,11 @@
     "lodash": "^4.17.21"
   },
   "devDependencies": {
-    "vite": "^5.0.0",
-    "@vitejs/plugin-vue": "^5.0.0"
-  },
-  "keywords": [
-    "geospatial",
-    "visualization",
-    "climate",
-    "ocean",
-    "three.js",
-    "d3",
-    "3d",
-    "ipcc",
-    "cmip6"
-  ],
-  "author": "Your Name",
-  "license": "MIT"
+    "vite": "^5.0.0"
+  }
 }
+
+
+
+
+

@@ -1,34 +1,12 @@
 import { BufferGeometry } from './BufferGeometry.js';
 
-/**
- * An instanced version of a geometry.
- */
 class InstancedBufferGeometry extends BufferGeometry {
 
-	/**
-	 * Constructs a new instanced buffer geometry.
-	 */
 	constructor() {
 
 		super();
 
-		/**
-		 * This flag can be used for type testing.
-		 *
-		 * @type {boolean}
-		 * @readonly
-		 * @default true
-		 */
-		this.isInstancedBufferGeometry = true;
-
 		this.type = 'InstancedBufferGeometry';
-
-		/**
-		 * The instance count.
-		 *
-		 * @type {number}
-		 * @default Infinity
-		 */
 		this.instanceCount = Infinity;
 
 	}
@@ -43,9 +21,15 @@ class InstancedBufferGeometry extends BufferGeometry {
 
 	}
 
+	clone() {
+
+		return new this.constructor().copy( this );
+
+	}
+
 	toJSON() {
 
-		const data = super.toJSON();
+		const data = super.toJSON( this );
 
 		data.instanceCount = this.instanceCount;
 
@@ -56,5 +40,7 @@ class InstancedBufferGeometry extends BufferGeometry {
 	}
 
 }
+
+InstancedBufferGeometry.prototype.isInstancedBufferGeometry = true;
 
 export { InstancedBufferGeometry };

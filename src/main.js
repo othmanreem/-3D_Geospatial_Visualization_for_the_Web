@@ -10,13 +10,20 @@ class OceanDashboard {
     this.currentData = null;
     this.allData = new Map();
     
+
     this.state = {
       scenario: 'SSP1-2.6',
       variable: 'sst',
-      period: 'near-term',
-      colormap: 'viridis',
-      opacity: 0.8,
+      period: 'near-term', // fixed
     };
+    
+    // this.state = {
+    //   scenario: 'SSP1-2.6',
+    //   variable: 'sst',
+    //   period: 'near-term',
+    //   colormap: 'viridis',
+    //   opacity: 0.8,
+    // };
 
     this.init();
   }
@@ -40,10 +47,10 @@ class OceanDashboard {
       this.updateAllVisualizations();
     });
 
-    document.getElementById('periodSelect').addEventListener('change', (e) => {
-      this.state.period = e.target.value;
-      this.updateAllVisualizations();
-    });
+    // document.getElementById('periodSelect').addEventListener('change', (e) => {
+    //   this.state.period = e.target.value;
+    //   this.updateAllVisualizations();
+    // });
 
     document.getElementById('colormapSelect').addEventListener('change', (e) => {
       this.state.colormap = e.target.value;

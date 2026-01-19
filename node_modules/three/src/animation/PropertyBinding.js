@@ -1,4 +1,3 @@
-import { warn, error } from '../utils.js';
 // Characters [].:/ are reserved for track binding syntax.
 const _RESERVED_CHARS_RE = '\\[\\]\\.:\\/';
 const _reservedRe = new RegExp( '[' + _RESERVED_CHARS_RE + ']', 'g' );
@@ -11,18 +10,18 @@ const _wordCharOrDot = '[^' + _RESERVED_CHARS_RE.replace( '\\.', '' ) + ']';
 
 // Parent directories, delimited by '/' or ':'. Currently unused, but must
 // be matched to parse the rest of the track name.
-const _directoryRe = /*@__PURE__*/ /((?:WC+[\/:])*)/.source.replace( 'WC', _wordChar );
+const _directoryRe = /((?:WC+[\/:])*)/.source.replace( 'WC', _wordChar );
 
 // Target node. May contain word characters (a-zA-Z0-9_) and '.' or '-'.
-const _nodeRe = /*@__PURE__*/ /(WCOD+)?/.source.replace( 'WCOD', _wordCharOrDot );
+const _nodeRe = /(WCOD+)?/.source.replace( 'WCOD', _wordCharOrDot );
 
 // Object on target node, and accessor. May not contain reserved
 // characters. Accessor may contain any character except closing bracket.
-const _objectRe = /*@__PURE__*/ /(?:\.(WC+)(?:\[(.+)\])?)?/.source.replace( 'WC', _wordChar );
+const _objectRe = /(?:\.(WC+)(?:\[(.+)\])?)?/.source.replace( 'WC', _wordChar );
 
 // Property and accessor. May not contain reserved characters. Accessor may
 // contain any non-bracket characters.
-const _propertyRe = /*@__PURE__*/ /\.(WC+)(?:\[(.+)\])?/.source.replace( 'WC', _wordChar );
+const _propertyRe = /\.(WC+)(?:\[(.+)\])?/.source.replace( 'WC', _wordChar );
 
 const _trackRe = new RegExp( ''
 	+ '^'
@@ -33,7 +32,7 @@ const _trackRe = new RegExp( ''
 	+ '$'
 );
 
-const _supportedObjectNames = [ 'material', 'materials', 'bones', 'map' ];
+const _supportedObjectNames = [ 'material', 'materials', 'bones' ];
 
 class Composite {
 
@@ -101,48 +100,15 @@ class Composite {
 // prototype version of these methods with one that represents
 // the bound state. When the property is not found, the methods
 // become no-ops.
-
-
-/**
- * This holds a reference to a real property in the scene graph; used internally.
- */
 class PropertyBinding {
 
-	/**
-	 * Constructs a new property binding.
-	 *
-	 * @param {Object} rootNode - The root node.
-	 * @param {string} path - The path.
-	 * @param {?Object} [parsedPath] - The parsed path.
-	 */
 	constructor( rootNode, path, parsedPath ) {
 
-		/**
-		 * The object path to the animated property.
-		 *
-		 * @type {string}
-		 */
 		this.path = path;
-
-		/**
-		 * An object holding information about the path.
-		 *
-		 * @type {Object}
-		 */
 		this.parsedPath = parsedPath || PropertyBinding.parseTrackName( path );
 
-		/**
-		 * The object owns the animated property.
-		 *
-		 * @type {?Object}
-		 */
-		this.node = PropertyBinding.findNode( rootNode, this.parsedPath.nodeName );
+		this.node = PropertyBinding.findNode( rootNode, this.parsedPath.nodeName ) || rootNode;
 
-		/**
-		 * The root node.
-		 *
-		 * @type {Object3D|Skeleton}
-		 */
 		this.rootNode = rootNode;
 
 		// initial state of these methods that calls 'bind'
@@ -152,15 +118,6 @@ class PropertyBinding {
 	}
 
 
-	/**
-	 * Factory method for creating a property binding from the given parameters.
-	 *
-	 * @static
-	 * @param {Object} root - The root node.
-	 * @param {string} path - The path.
-	 * @param {?Object} [parsedPath] - The parsed path.
-	 * @return {PropertyBinding|Composite} The created property binding or composite.
-	 */
 	static create( root, path, parsedPath ) {
 
 		if ( ! ( root && root.isAnimationObjectGroup ) ) {
@@ -179,8 +136,8 @@ class PropertyBinding {
 	 * Replaces spaces with underscores and removes unsupported characters from
 	 * node names, to ensure compatibility with parseTrackName().
 	 *
-	 * @param {string} name - Node name to be sanitized.
-	 * @return {string} The sanitized node name.
+	 * @param {string} name Node name to be sanitized.
+	 * @return {string}
 	 */
 	static sanitizeNodeName( name ) {
 
@@ -188,29 +145,11 @@ class PropertyBinding {
 
 	}
 
-	/**
-	 * Parses the given track name (an object path to an animated property) and
-	 * returns an object with information about the path. Matches strings in the following forms:
-	 *
-	 * - nodeName.property
-	 * - nodeName.property[accessor]
-	 * - nodeName.material.property[accessor]
-	 * - uuid.property[accessor]
-	 * - uuid.objectName[objectIndex].propertyName[propertyIndex]
-	 * - parentName/nodeName.property
-	 * - parentName/parentName/nodeName.property[index]
-	 * - .bone[Armature.DEF_cog].position
-	 * - scene:helium_balloon_model:helium_balloon_model.position
-	 *
-	 * @static
-	 * @param {string} trackName - The track name to parse.
-	 * @return {Object} The parsed track name as an object.
-	 */
 	static parseTrackName( trackName ) {
 
 		const matches = _trackRe.exec( trackName );
 
-		if ( matches === null ) {
+		if ( ! matches ) {
 
 			throw new Error( 'PropertyBinding: Cannot parse trackName: ' + trackName );
 
@@ -254,18 +193,9 @@ class PropertyBinding {
 
 	}
 
-	/**
-	 * Searches for a node in the hierarchy of the given root object by the given
-	 * node name.
-	 *
-	 * @static
-	 * @param {Object} root - The root object.
-	 * @param {string|number} nodeName - The name of the node.
-	 * @return {?Object} The found node. Returns `null` if no object was found.
-	 */
 	static findNode( root, nodeName ) {
 
-		if ( nodeName === undefined || nodeName === '' || nodeName === '.' || nodeName === - 1 || nodeName === root.name || nodeName === root.uuid ) {
+		if ( ! nodeName || nodeName === '' || nodeName === '.' || nodeName === - 1 || nodeName === root.name || nodeName === root.uuid ) {
 
 			return root;
 
@@ -331,7 +261,7 @@ class PropertyBinding {
 
 	_getValue_direct( buffer, offset ) {
 
-		buffer[ offset ] = this.targetObject[ this.propertyName ];
+		buffer[ offset ] = this.node[ this.propertyName ];
 
 	}
 
@@ -481,9 +411,7 @@ class PropertyBinding {
 
 	}
 
-	/**
-	 * Creates a getter / setter pair for the property tracked by this binding.
-	 */
+	// create getter / setter pair for a property in the scene graph
 	bind() {
 
 		let targetObject = this.node;
@@ -495,7 +423,7 @@ class PropertyBinding {
 
 		if ( ! targetObject ) {
 
-			targetObject = PropertyBinding.findNode( this.rootNode, parsedPath.nodeName );
+			targetObject = PropertyBinding.findNode( this.rootNode, parsedPath.nodeName ) || this.rootNode;
 
 			this.node = targetObject;
 
@@ -508,7 +436,7 @@ class PropertyBinding {
 		// ensure there is a value node
 		if ( ! targetObject ) {
 
-			warn( 'PropertyBinding: No target node found for track: ' + this.path + '.' );
+			console.error( 'THREE.PropertyBinding: Trying to update node for track: ' + this.path + ' but it wasn\'t found.' );
 			return;
 
 		}
@@ -524,14 +452,14 @@ class PropertyBinding {
 
 					if ( ! targetObject.material ) {
 
-						error( 'PropertyBinding: Can not bind to material as node does not have a material.', this );
+						console.error( 'THREE.PropertyBinding: Can not bind to material as node does not have a material.', this );
 						return;
 
 					}
 
 					if ( ! targetObject.material.materials ) {
 
-						error( 'PropertyBinding: Can not bind to material.materials as node.material does not have a materials array.', this );
+						console.error( 'THREE.PropertyBinding: Can not bind to material.materials as node.material does not have a materials array.', this );
 						return;
 
 					}
@@ -544,7 +472,7 @@ class PropertyBinding {
 
 					if ( ! targetObject.skeleton ) {
 
-						error( 'PropertyBinding: Can not bind to bones as node does not have a skeleton.', this );
+						console.error( 'THREE.PropertyBinding: Can not bind to bones as node does not have a skeleton.', this );
 						return;
 
 					}
@@ -568,37 +496,11 @@ class PropertyBinding {
 
 					break;
 
-				case 'map':
-
-					if ( 'map' in targetObject ) {
-
-						targetObject = targetObject.map;
-						break;
-
-					}
-
-					if ( ! targetObject.material ) {
-
-						error( 'PropertyBinding: Can not bind to material as node does not have a material.', this );
-						return;
-
-					}
-
-					if ( ! targetObject.material.map ) {
-
-						error( 'PropertyBinding: Can not bind to material.map as node.material does not have a map.', this );
-						return;
-
-					}
-
-					targetObject = targetObject.material.map;
-					break;
-
 				default:
 
 					if ( targetObject[ objectName ] === undefined ) {
 
-						error( 'PropertyBinding: Can not bind to objectName of node undefined.', this );
+						console.error( 'THREE.PropertyBinding: Can not bind to objectName of node undefined.', this );
 						return;
 
 					}
@@ -612,7 +514,7 @@ class PropertyBinding {
 
 				if ( targetObject[ objectIndex ] === undefined ) {
 
-					error( 'PropertyBinding: Trying to bind to objectIndex of objectName, but is undefined.', this, targetObject );
+					console.error( 'THREE.PropertyBinding: Trying to bind to objectIndex of objectName, but is undefined.', this, targetObject );
 					return;
 
 				}
@@ -630,7 +532,7 @@ class PropertyBinding {
 
 			const nodeName = parsedPath.nodeName;
 
-			error( 'PropertyBinding: Trying to update property for track: ' + nodeName +
+			console.error( 'THREE.PropertyBinding: Trying to update property for track: ' + nodeName +
 				'.' + propertyName + ' but it wasn\'t found.', targetObject );
 			return;
 
@@ -641,11 +543,11 @@ class PropertyBinding {
 
 		this.targetObject = targetObject;
 
-		if ( targetObject.isMaterial === true ) {
+		if ( targetObject.needsUpdate !== undefined ) { // material
 
 			versioning = this.Versioning.NeedsUpdate;
 
-		} else if ( targetObject.isObject3D === true ) {
+		} else if ( targetObject.matrixWorldNeedsUpdate !== undefined ) { // node transform
 
 			versioning = this.Versioning.MatrixWorldNeedsUpdate;
 
@@ -665,21 +567,31 @@ class PropertyBinding {
 				// support resolving morphTarget names into indices.
 				if ( ! targetObject.geometry ) {
 
-					error( 'PropertyBinding: Can not bind to morphTargetInfluences because node does not have a geometry.', this );
+					console.error( 'THREE.PropertyBinding: Can not bind to morphTargetInfluences because node does not have a geometry.', this );
 					return;
 
 				}
 
-				if ( ! targetObject.geometry.morphAttributes ) {
+				if ( targetObject.geometry.isBufferGeometry ) {
 
-					error( 'PropertyBinding: Can not bind to morphTargetInfluences because node does not have a geometry.morphAttributes.', this );
+					if ( ! targetObject.geometry.morphAttributes ) {
+
+						console.error( 'THREE.PropertyBinding: Can not bind to morphTargetInfluences because node does not have a geometry.morphAttributes.', this );
+						return;
+
+					}
+
+					if ( targetObject.morphTargetDictionary[ propertyIndex ] !== undefined ) {
+
+						propertyIndex = targetObject.morphTargetDictionary[ propertyIndex ];
+
+					}
+
+
+				} else {
+
+					console.error( 'THREE.PropertyBinding: Can not bind to morphTargetInfluences on THREE.Geometry. Use THREE.BufferGeometry instead.', this );
 					return;
-
-				}
-
-				if ( targetObject.morphTargetDictionary[ propertyIndex ] !== undefined ) {
-
-					propertyIndex = targetObject.morphTargetDictionary[ propertyIndex ];
 
 				}
 
@@ -716,9 +628,6 @@ class PropertyBinding {
 
 	}
 
-	/**
-	 * Unbinds the property.
-	 */
 	unbind() {
 
 		this.node = null;

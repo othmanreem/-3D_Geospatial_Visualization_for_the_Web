@@ -3,51 +3,19 @@ import { Path } from './Path.js';
 import { Shape } from './Shape.js';
 import { ShapeUtils } from '../ShapeUtils.js';
 
-/**
- * This class is used to convert a series of paths to an array of
- * shapes. It is specifically used in context of fonts and SVG.
- */
 class ShapePath {
 
-	/**
-	 * Constructs a new shape path.
-	 */
 	constructor() {
 
 		this.type = 'ShapePath';
 
-		/**
-		 * The color of the shape.
-		 *
-		 * @type {Color}
-		 */
 		this.color = new Color();
 
-		/**
-		 * The paths that have been generated for this shape.
-		 *
-		 * @type {Array<Path>}
-		 * @default null
-		 */
 		this.subPaths = [];
-
-		/**
-		 * The current path that is being generated.
-		 *
-		 * @type {?Path}
-		 * @default null
-		 */
 		this.currentPath = null;
 
 	}
 
-	/**
-	 * Creates a new path and moves it current point to the given one.
-	 *
-	 * @param {number} x - The x coordinate.
-	 * @param {number} y - The y coordinate.
-	 * @return {ShapePath} A reference to this shape path.
-	 */
 	moveTo( x, y ) {
 
 		this.currentPath = new Path();
@@ -58,14 +26,6 @@ class ShapePath {
 
 	}
 
-	/**
-	 * Adds an instance of {@link LineCurve} to the path by connecting
-	 * the current point with the given one.
-	 *
-	 * @param {number} x - The x coordinate of the end point.
-	 * @param {number} y - The y coordinate of the end point.
-	 * @return {ShapePath} A reference to this shape path.
-	 */
 	lineTo( x, y ) {
 
 		this.currentPath.lineTo( x, y );
@@ -74,16 +34,6 @@ class ShapePath {
 
 	}
 
-	/**
-	 * Adds an instance of {@link QuadraticBezierCurve} to the path by connecting
-	 * the current point with the given one.
-	 *
-	 * @param {number} aCPx - The x coordinate of the control point.
-	 * @param {number} aCPy - The y coordinate of the control point.
-	 * @param {number} aX - The x coordinate of the end point.
-	 * @param {number} aY - The y coordinate of the end point.
-	 * @return {ShapePath} A reference to this shape path.
-	 */
 	quadraticCurveTo( aCPx, aCPy, aX, aY ) {
 
 		this.currentPath.quadraticCurveTo( aCPx, aCPy, aX, aY );
@@ -92,18 +42,6 @@ class ShapePath {
 
 	}
 
-	/**
-	 * Adds an instance of {@link CubicBezierCurve} to the path by connecting
-	 * the current point with the given one.
-	 *
-	 * @param {number} aCP1x - The x coordinate of the first control point.
-	 * @param {number} aCP1y - The y coordinate of the first control point.
-	 * @param {number} aCP2x - The x coordinate of the second control point.
-	 * @param {number} aCP2y - The y coordinate of the second control point.
-	 * @param {number} aX - The x coordinate of the end point.
-	 * @param {number} aY - The y coordinate of the end point.
-	 * @return {ShapePath} A reference to this shape path.
-	 */
 	bezierCurveTo( aCP1x, aCP1y, aCP2x, aCP2y, aX, aY ) {
 
 		this.currentPath.bezierCurveTo( aCP1x, aCP1y, aCP2x, aCP2y, aX, aY );
@@ -112,13 +50,6 @@ class ShapePath {
 
 	}
 
-	/**
-	 * Adds an instance of {@link SplineCurve} to the path by connecting
-	 * the current point with the given list of points.
-	 *
-	 * @param {Array<Vector2>} pts - An array of points in 2D space.
-	 * @return {ShapePath} A reference to this shape path.
-	 */
 	splineThru( pts ) {
 
 		this.currentPath.splineThru( pts );
@@ -127,14 +58,7 @@ class ShapePath {
 
 	}
 
-	/**
-	 * Converts the paths into an array of shapes.
-	 *
-	 * @param {boolean} isCCW - By default solid shapes are  defined clockwise (CW) and holes are defined counterclockwise (CCW).
-	 * If this flag is set to `true`, then those are flipped.
-	 * @return {Array<Shape>} An array of shapes.
-	 */
-	toShapes( isCCW ) {
+	toShapes( isCCW, noHoles ) {
 
 		function toShapesNoHoles( inSubpaths ) {
 
@@ -220,6 +144,9 @@ class ShapePath {
 		const subPaths = this.subPaths;
 		if ( subPaths.length === 0 ) return [];
 
+		if ( noHoles === true )	return	toShapesNoHoles( subPaths );
+
+
 		let solid, tmpPath, tmpShape;
 		const shapes = [];
 
@@ -236,7 +163,7 @@ class ShapePath {
 		let holesFirst = ! isClockWise( subPaths[ 0 ].getPoints() );
 		holesFirst = isCCW ? ! holesFirst : holesFirst;
 
-		// log("Holes first", holesFirst);
+		// console.log("Holes first", holesFirst);
 
 		const betterShapeHoles = [];
 		const newShapes = [];
@@ -264,13 +191,13 @@ class ShapePath {
 				if ( holesFirst )	mainIdx ++;
 				newShapeHoles[ mainIdx ] = [];
 
-				//log('cw', i);
+				//console.log('cw', i);
 
 			} else {
 
 				newShapeHoles[ mainIdx ].push( { h: tmpPath, p: tmpPoints[ 0 ] } );
 
-				//log('ccw', i);
+				//console.log('ccw', i);
 
 			}
 
@@ -283,7 +210,7 @@ class ShapePath {
 		if ( newShapes.length > 1 ) {
 
 			let ambiguous = false;
-			let toChange = 0;
+			const toChange = [];
 
 			for ( let sIdx = 0, sLen = newShapes.length; sIdx < sLen; sIdx ++ ) {
 
@@ -304,8 +231,7 @@ class ShapePath {
 
 						if ( isPointInsidePolygon( ho.p, newShapes[ s2Idx ].p ) ) {
 
-							if ( sIdx !== s2Idx )	toChange ++;
-
+							if ( sIdx !== s2Idx )	toChange.push( { froms: sIdx, tos: s2Idx, hole: hIdx } );
 							if ( hole_unassigned ) {
 
 								hole_unassigned = false;
@@ -330,10 +256,12 @@ class ShapePath {
 				}
 
 			}
+			// console.log("ambiguous: ", ambiguous);
 
-			if ( toChange > 0 && ambiguous === false ) {
+			if ( toChange.length > 0 ) {
 
-				newShapeHoles = betterShapeHoles;
+				// console.log("to change: ", toChange);
+				if ( ! ambiguous )	newShapeHoles = betterShapeHoles;
 
 			}
 
@@ -355,7 +283,7 @@ class ShapePath {
 
 		}
 
-		//log("shape", shapes);
+		//console.log("shape", shapes);
 
 		return shapes;
 
