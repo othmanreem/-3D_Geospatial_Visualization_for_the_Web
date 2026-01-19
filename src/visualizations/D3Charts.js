@@ -101,12 +101,12 @@ export class D3Charts {
 
     // Mean label
     g.append('text')
-      .attr('x', xScale(stats.mean))
-      .attr('y', -5)
-      .attr('fill', 'red')
-      .style('font-size', '10px')
-      .attr('text-anchor', 'middle')
-      .text(`μ=${stats.mean.toFixed(2)}`);
+    .attr('x', xScale(stats.mean))
+    .attr('y', Math.max(10, yScale(stats.mean) - 8))
+    .attr('fill', 'red')
+    .style('font-size', '10px')
+    .attr('text-anchor', 'middle')
+    .text(`μ=${stats.mean.toFixed(2)}`);
   }
 
   drawComparison(svgSelector, datasets) {
@@ -254,14 +254,15 @@ export class D3Charts {
 
     // Value labels on bars
     g.selectAll('.value-label')
-      .data(comparisonData)
-      .join('text')
-      .attr('class', 'value-label')
-      .attr('x', d => xScale(d.scenario) + xScale.bandwidth() / 2)
-      .attr('y', d => yScale(d.value) - 5)
-      .attr('text-anchor', 'middle')
-      .style('font-size', '11px')
-      .text(d => d.value.toFixed(2));
+    .data(comparisonData)
+    .join('text')
+    .attr('class', 'value-label')
+    .attr('x', d => xScale(d.scenario) + xScale.bandwidth() / 2)
+    .attr('y', d => Math.max(12, yScale(d.value) - 6))
+    .attr('text-anchor', 'middle')
+    .style('font-size', '11px')
+    .text(d => d.value.toFixed(2));
+  
 
     // Axes
     g.append('g')
