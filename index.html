@@ -52,11 +52,7 @@
               <!-- Time Period Selection -->
               <div class="mb-4">
                 <label for="periodSelect" class="form-label fw-bold">Time Period</label>
-                <select id="periodSelect" class="form-select">
-                  <option value="near-term">Near Term (2021-2040)</option>
-                  <option value="mid-term">Mid Term (2041-2060)</option>
-                  <option value="long-term">Long Term (2080-2100)</option>
-                </select>
+                <label value="near-term">Near Term (2021-2040)</label>
               </div>
 
               <!-- Colormap Selection -->
@@ -64,7 +60,7 @@
                 <label for="colormapSelect" class="form-label fw-bold">Color Scale</label>
                 <select id="colormapSelect" class="form-select">
                   <option value="viridis">Viridis</option>
-                  <option value="rdylbu_r">Red-Yellow-Blue (Rev)</option>
+                  <!-- <option value="rdylbu_r">Red-Yellow-Blue (Rev)</option> -->
                   <option value="reds">Reds</option>
                   <option value="blues">Blues</option>
                 </select>
@@ -86,9 +82,17 @@
                   <p id="meanStat">Mean: --</p>
                 </div>
               </div>
+              <div class="alert alert-warning">
+                <div id="pointInfoContainer" class="small">
+                  <p><em>Click a point on the globe to view details</em></p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
+
+      
+
 
               <!-- Visualization Area -->
       <div class="col-lg-9 visualization-area">
@@ -102,7 +106,8 @@
               </div>
               <div class="card-body p-0">
                 <canvas id="canvas3d"></canvas>
-                <div id="tooltip" class="visualization-tooltip" style="display: none;"></div>
+                <div id="tooltip" class="visualization-tooltip hidden"></div>
+
               </div>
             </div>
           </div>

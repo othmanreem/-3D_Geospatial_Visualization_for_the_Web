@@ -29,6 +29,25 @@ class OceanDashboard {
     this.setupWindowResize();
   }
 
+  showTooltip(info, x, y) {
+    if (!Number.isFinite(info.value)) {
+      return;
+    }
+  
+    // Display in the panel instead of on the globe
+    const pointInfoContainer = document.getElementById('pointInfoContainer');
+    if (!pointInfoContainer) return;
+  
+    pointInfoContainer.innerHTML = `
+      <h6 class="alert-heading">Clicked Point</h6>
+      <p><strong>${this.state.variable.toUpperCase()}</strong></p>
+      <p>Value: <code>${info.value.toFixed(3)}</code></p>
+      <p>Latitude: <code>${info.lat.toFixed(2)}°</code></p>
+      <p>Longitude: <code>${info.lon.toFixed(2)}°</code></p>
+    `;
+  }
+  
+  
   setupEventListeners() {
     document.getElementById('scenarioSelect').addEventListener('change', (e) => {
       this.state.scenario = e.target.value;
@@ -40,7 +59,7 @@ class OceanDashboard {
       this.updateAllVisualizations();
     });
 
-
+    
     document.getElementById('colormapSelect').addEventListener('change', (e) => {
       this.state.colormap = e.target.value;
       if (this.viz3d && this.currentData) {
@@ -62,6 +81,7 @@ class OceanDashboard {
         this.viz3d.setOpacity(opacity);
       }
     });
+
   }
 
   async loadInitialData() {
@@ -115,19 +135,29 @@ class OceanDashboard {
     const rect = canvas.parentElement.getBoundingClientRect();
     
     this.viz3d = new OceanViz3D(canvas, rect.width, rect.height);
+  
+    // CONNECT 3D PICKING → DASHBOARD
+    this.viz3d.onPointSelected = (info, x, y) => {
+      this.showTooltip(info, x, y);
+    };
     
     if (this.currentData) {
       this.viz3d.updateSurface(
         this.currentData.data,
-          this.currentData.width,
-          this.currentData.height,
-          this.currentData.metadata.bounds, // from GeoTIFF
-          this.state.colormap
+        this.currentData.width,
+        this.currentData.height,
+        this.currentData.metadata.bounds,
+        this.state.colormap
       );
       
       this.viz3d.setOpacity(this.state.opacity);
     }
+
+    this.viz3d.onPointSelected = (info, x, y) => {
+      this.showTooltip(info, x, y);
+    };
   }
+  
 
   async updateAllVisualizations() {
     try {

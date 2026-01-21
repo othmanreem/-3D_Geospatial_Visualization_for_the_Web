@@ -85,19 +85,20 @@
     background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
   }
   
-  .visualization-tooltip {
-    position: absolute;
+  visualization-tooltip {
+    position: fixed;  /* Changed from absolute */
     background-color: rgba(0, 0, 0, 0.9);
     color: white;
     padding: 8px 12px;
     border-radius: 4px;
     font-size: 12px;
     pointer-events: none;
-    z-index: 1000;
+    z-index: 10000;  /* Increased z-index */
     max-width: 200px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    border: 1px solid rgba(255, 255, 255, 0.2);  /* Add visible border for debugging */
   }
   
   /* Smooth transitions */

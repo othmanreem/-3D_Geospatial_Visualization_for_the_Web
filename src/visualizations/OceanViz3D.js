@@ -3,14 +3,21 @@ import { PCFSoftShadowMap } from 'three';
 import chroma from 'chroma-js';
 
 export class OceanViz3D {
+
   constructor(canvas, width, height) {
+    console.log('[OceanViz3D] initialized');
     this.canvas = canvas;
     this.width = width;
     this.height = height;
     this.mesh = null;
     this.textureData = null;
     this.colorMap = 'viridis';
-    
+
+    this.raycaster = new THREE.Raycaster();
+    this.mouse = new THREE.Vector2();
+
+    this.onPointSelected = null; // callback to main.js
+
     this.setupScene();
     this.setupControls();
   }
@@ -53,18 +60,62 @@ export class OceanViz3D {
     );
     this.scene.add(globe);
 
-
-    // // Grid helper for reference
-    // const gridHelper = new THREE.GridHelper(500, 10, 0x444444, 0x888888);
-    // this.scene.add(gridHelper);
-
-    // // Axes helper
-    // const axesHelper = new THREE.AxesHelper(200);
-    // this.scene.add(axesHelper);
-
     // Animation loop
     this.animate();
   }
+
+  getPointInfo(intersection) {
+    const { bounds, data, width, height } = this.surfaceMeta;
+  
+    const { lat, lon } = this.cartesianToLatLon(intersection.point);
+  
+    // Map lat/lon → raster indices
+    const j = Math.round(
+      ((lon - bounds.west) / (bounds.east - bounds.west)) * (width - 1)
+    );
+    const i = Math.round(
+      ((bounds.north - lat) / (bounds.north - bounds.south)) * (height - 1)
+    );
+  
+    const index = i * width + j;
+    const value = data[index];
+  
+    return {
+      lat,
+      lon,
+      value,
+      index,
+    };
+  }
+
+  handleClick(event) {
+    if (!this.mesh) return;
+  
+    const rect = this.canvas.getBoundingClientRect();
+  
+    // Convert mouse to NDC
+    this.mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    this.mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+  
+    this.raycaster.setFromCamera(this.mouse, this.camera);
+  
+    const intersects = this.raycaster.intersectObject(this.mesh);
+  
+    if (intersects.length === 0) return;
+  
+    const hit = intersects[0];
+    const point = hit.point;
+  
+    const info = this.getPointInfo(hit);
+  
+    if (this.onPointSelected) {
+      // this.onPointSelected(info, event.clientX, event.clientY);
+      const rect = this.canvas.getBoundingClientRect();
+      const x = event.clientX - rect.left;
+      const y = event.clientY - rect.top;
+      this.onPointSelected(info, x, y);
+    }
+  }  
 
   setupLighting() {
     // Ambient light
@@ -90,42 +141,114 @@ export class OceanViz3D {
     this.scene.add(hemiLight);
   }
 
+  handlePick(event) {
+    if (!this.mesh || !this.surfaceMeta) return;
+  
+    const rect = this.canvas.getBoundingClientRect();
+  
+    this.mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    this.mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+  
+    this.raycaster.setFromCamera(this.mouse, this.camera);
+  
+    const intersects = this.raycaster.intersectObject(this.mesh);
+    if (intersects.length === 0) return;
+  
+    const hit = intersects[0];
+    const info = this.getPointInfo(hit);
+  
+    if (this.onPointSelected) {
+      // Pass canvas-relative coordinates, not page coordinates
+      const canvasX = event.clientX - rect.left;
+      const canvasY = event.clientY - rect.top;
+      this.onPointSelected(info, canvasX, canvasY);
+    }
+  }
+  
+  
+
+  rotate(dx, dy) {
+    if (!this.mesh) return;
+  
+    const ROTATION_SPEED = 0.005;
+  
+    this.mesh.rotation.y += dx * ROTATION_SPEED;
+    this.mesh.rotation.x += dy * ROTATION_SPEED;
+  
+    // Optional: prevent flipping upside down
+    this.mesh.rotation.x = Math.max(
+      -Math.PI / 2,
+      Math.min(Math.PI / 2, this.mesh.rotation.x)
+    );
+  }
+
   setupControls() {
+ 
+    this.isDragging = false;
+    this.dragDistance = 0;
+
     // Simple orbit-like controls with mouse
     this.isDragging = false;
     this.previousMousePosition = { x: 0, y: 0 };
 
     this.canvas.addEventListener('mousedown', (e) => {
       this.isDragging = true;
-      this.previousMousePosition = { x: e.clientX, y: e.clientY };
+      this.dragDistance = 0;
+      this.lastX = e.clientX;
+      this.lastY = e.clientY;
     });
-
+    
     this.canvas.addEventListener('mousemove', (e) => {
-      if (this.isDragging) {
-        const deltaX = e.clientX - this.previousMousePosition.x;
-        const deltaY = e.clientY - this.previousMousePosition.y;
-
-        if (this.mesh) {
-          this.mesh.rotation.y += deltaX * 0.01;
-          this.mesh.rotation.x += deltaY * 0.01;
-        }
-      }
-      this.previousMousePosition = { x: e.clientX, y: e.clientY };
+      if (!this.isDragging) return;
+    
+      const dx = e.clientX - this.lastX;
+      const dy = e.clientY - this.lastY;
+    
+      this.dragDistance += Math.abs(dx) + Math.abs(dy);
+    
+      this.rotate(dx, dy); // keep your existing rotation logic
+    
+      this.lastX = e.clientX;
+      this.lastY = e.clientY;
     });
-
-    this.canvas.addEventListener('mouseup', () => {
+    
+    this.canvas.addEventListener('mouseup', (e) => {
       this.isDragging = false;
+      // THIS IS THE KEY
+      if (this.dragDistance < 5) {
+        this.handlePick(e);
+      }
     });
+    
 
+  
+    
     this.canvas.addEventListener('wheel', (e) => {
       e.preventDefault();
       const zoomSpeed = 10;
       const direction = e.deltaY > 0 ? 1 : -1;
       this.camera.position.multiplyScalar(1 + direction * 0.1 * zoomSpeed / 100);
     });
+
+    
   }
 
+  
+  // Convert Cartesian → lat/lon helper
+  cartesianToLatLon(vec) {
+    const r = vec.length();
+    const lat = 90 - THREE.MathUtils.radToDeg(Math.acos(vec.y / r));
+    const lon = THREE.MathUtils.radToDeg(Math.atan2(vec.z, vec.x)) - 180;
+    return { lat, lon };
+  }
   updateSurface(data, width, height, bounds, colormap = 'viridis') {
+
+    this.surfaceMeta = {
+      data,
+      width,
+      height,
+      bounds,
+    };
     // Clean up old mesh
     if (this.mesh) {
       this.scene.remove(this.mesh);
@@ -183,6 +306,7 @@ export class OceanViz3D {
         }
   
         const pos = this.latLonToCartesian(lat, lon, radius);
+       
         vertices.push(pos.x, pos.y, pos.z);
       }
     }
@@ -223,12 +347,13 @@ export class OceanViz3D {
     // Camera framing
     this.camera.position.set(0, 0, 300);
     this.camera.lookAt(0, 0, 0);
+
   }
   
   getColorMap(name) {
     const maps = {
       viridis: chroma.scale('viridis'),
-      rdylbu_r: chroma.scale('RdYlBu').mode('lab'),
+      // rdylbu_r: chroma.scale('RdYlBu').mode('lab'),
       reds: chroma.scale('Reds'),
       blues: chroma.scale('Blues'),
     };
